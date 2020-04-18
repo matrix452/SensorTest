@@ -6,8 +6,8 @@ spi.open(0,0)
 spi.max_speed_Hz = 250000
 
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(14, GPIO.OUT)
-GPIO.setup(15, GPIO.OUT)
+#GPIO.setup(14, GPIO.OUT)
+#GPIO.setup(15, GPIO.OUT)
 
 def poll_sensor(channel):
     assert 0 <= channel <= 1, 'ADC channel must be 0 or 1.'
