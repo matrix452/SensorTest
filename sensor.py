@@ -1,37 +1,34 @@
-from time import sleep
-import RPi.GPIO as GPIO
-import spidev
-spi = spidev.SpiDev()
-spi.open(0,0)
-spi.max_speed_Hz = 250000
+#Import Items needed to read TempSensor and connect via SSH
+import csv
+import datetime
+import paramiko
+import time
+import board
+import busio
+import adafruit_mcp9808
+from datetime import timedelta
 
-GPIO.setmode(GPIO.BCM)
-#GPIO.setup(14, GPIO.OUT)
-#GPIO.setup(15, GPIO.OUT)
+#Define the abaility to edit/put a file on a remote device
+def put_file(machinename, username,  dirname, passwd, filename, data):
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(machinename,username=username,password=passwd)
+    sftp = ssh.open_sftp()
+    #try:
+    #    sftp.mkdir(dirname)
+    #except IOError:
+    #    pass
+    f = sftp.open(dirname + '/' + filename, 'a+')
+    f.write(data)
+    f.close()
+    ssh.close()
 
-def poll_sensor(channel):
-    assert 0 <= channel <= 1, 'ADC channel must be 0 or 1.'
-    # First bit of cbyte is single=1 or diff=0.
-    # Second bit is channel 0 or 1
-    if channel:
-        cbyte = 0b11000000
+i2c = busio.I2C(board.SCL, board.SDA)
+mcp = adafruit_mcp9808.MCP9808(i2c)
+tempC = mcp.temperature
+tempF = tempC * 9/5+32
+if float(tempF) >= 86:
+    print('Danger, current temp is {} F, over the trehsold'.format(tempF))
     else:
-        cbyte = 0b10000000
-          
-      # Send (Start bit=1, cbyte=sgl/diff & odd/sign & MSBF = 0)
-    r = spi.xfer2([1, cbyte, 0])
-                                                                                                                                          # 10 bit value from returned bytes (bits 13-22):
-      # XXXXXXXX, XXXX####, ######XX
-    return ((r[1] & 31) << 6) + (r[2] >> 2)
-
-try:
-    while True:
-        channel = 0
-        channeldata = poll_sensor(channel)
-        voltage = round(((channeldata * 3300)/1048),0)
-        print('Voltage (mv): {}'.format(voltage))
-        print('Data       :{}\n'.format(channelid))
-finally:
-    spi.close()
-    GPIO.cleanup()
-    print "\n All cleaned up."
+    print('Temp {} F'.format(tempF))
+time.sleep(2)
